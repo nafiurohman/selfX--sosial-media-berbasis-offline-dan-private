@@ -1,4 +1,4 @@
-const CACHE_NAME = 'selfx-pwa-v1';
+const CACHE_NAME = 'selfx-pwa-v26.01.08';
 const urlsToCache = [
   '/',
   '/manifest.json',

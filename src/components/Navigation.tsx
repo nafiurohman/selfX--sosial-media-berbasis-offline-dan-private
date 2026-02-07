@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, Bookmark, User, Settings, ChevronDown, BookOpen } from 'lucide-react';
+import { Home, Search, Bookmark, User, Settings, ChevronDown, BookOpen, Calendar, Archive } from 'lucide-react';
 import { getUser } from '@/lib/storage';
 import {
   DropdownMenu,
@@ -24,8 +24,10 @@ export function Navigation({ onCompose, onReceiveShare }: NavigationProps) {
   const navItems = [
     { id: 'home', label: 'Home', icon: Home, path: '/feed' },
     { id: 'search', label: 'Cari', icon: Search, action: 'search' },
+    { id: 'calendar', label: 'Kalender', icon: Calendar, path: '/calendar' },
     { id: 'stories', label: 'Cerita', icon: BookOpen, path: '/stories' },
-    { id: 'bookmarks', label: 'Simpan', icon: Bookmark, path: '/bookmarks' },
+    { id: 'bookmarks', label: 'Bookmark', icon: Bookmark, path: '/bookmarks' },
+    { id: 'archive', label: 'Arsip', icon: Archive, path: '/archive' },
     { id: 'profile', label: 'Profile', icon: User, path: '/profile' },
   ];
 
@@ -141,6 +143,17 @@ export function Navigation({ onCompose, onReceiveShare }: NavigationProps) {
         </button>
         
         <button
+          onClick={() => navigate('/calendar')}
+          className={cn(
+            'bottom-nav-item',
+            isActive('/calendar') && 'active'
+          )}
+        >
+          <Calendar className="w-5 h-5" />
+          <span className="bottom-nav-label">Kalender</span>
+        </button>
+        
+        <button
           onClick={() => navigate('/stories')}
           className={cn(
             'bottom-nav-item',
@@ -149,17 +162,6 @@ export function Navigation({ onCompose, onReceiveShare }: NavigationProps) {
         >
           <BookOpen className="w-5 h-5" />
           <span className="bottom-nav-label">Cerita</span>
-        </button>
-        
-        <button
-          onClick={() => navigate('/bookmarks')}
-          className={cn(
-            'bottom-nav-item',
-            isActive('/bookmarks') && 'active'
-          )}
-        >
-          <Bookmark className="w-5 h-5" />
-          <span className="bottom-nav-label">Simpan</span>
         </button>
         
         <button

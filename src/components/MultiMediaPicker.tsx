@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ImagePlus, Film, X, RectangleHorizontal, Square, Maximize, Download, Edit3 } from 'lucide-react';
+import { ImagePlus, Film, X, RectangleHorizontal, Square, Maximize, Download, Edit3, MoreHorizontal, Mic, Play, Pause } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import type { MediaItem } from '@/lib/types';
+import { ImageEditor } from '@/components/ImageEditor';
+import { AudioRecorder } from '@/components/AudioRecorder';
 
 interface MultiMediaPickerProps {
   media: MediaItem[];
@@ -21,8 +23,14 @@ export function MultiMediaPicker({ media, onMediaChange, className }: MultiMedia
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const [editingMedia, setEditingMedia] = useState<MediaItem | null>(null);
   const [showDimensionPicker, setShowDimensionPicker] = useState(false);
+  const [showImageEditor, setShowImageEditor] = useState(false);
+  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const [audioProgress, setAudioProgress] = useState<Map<string, number>>(new Map());
+  const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -81,9 +89,29 @@ export function MultiMediaPicker({ media, onMediaChange, className }: MultiMedia
   };
 
   const handleDimensionSelect = async (dimension: '4:5' | '1:1' | 'original') => {
-    if (pendingImage && !isProcessing) {
-      setIsProcessing(true);
-      try {
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
+    try {
+      // Check if editing existing media or adding new
+      if (editingMedia) {
+        // Edit existing media
+        let processedImage = editingMedia.data;
+        if (dimension !== 'original') {
+          processedImage = await cropImage(editingMedia.data, dimension);
+        }
+
+        const updatedMedia = media.map(item => 
+          item.id === editingMedia.id 
+            ? { ...item, data: processedImage, dimension }
+            : item
+        );
+        
+        onMediaChange(updatedMedia);
+        setEditingMedia(null);
+        setShowDimensionPicker(false);
+      } else if (pendingImage) {
+        // Add new media
         let processedImage = pendingImage;
         if (dimension !== 'original') {
           processedImage = await cropImage(pendingImage, dimension);
@@ -99,9 +127,9 @@ export function MultiMediaPicker({ media, onMediaChange, className }: MultiMedia
         onMediaChange([...media, newMediaItem]);
         setPendingImage(null);
         setShowDimensionPicker(false);
-      } finally {
-        setIsProcessing(false);
       }
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -190,6 +218,75 @@ export function MultiMediaPicker({ media, onMediaChange, className }: MultiMedia
     e.target.value = '';
   };
 
+  const handleEditMedia = (item: MediaItem) => {
+    if (item.type === 'image') {
+      setEditingMedia(item);
+      setShowImageEditor(true);
+    }
+  };
+
+  const handleSaveEditedImage = (editedImageData: string) => {
+    if (editingMedia) {
+      const updatedMedia = media.map(item => 
+        item.id === editingMedia.id 
+          ? { ...item, data: editedImageData }
+          : item
+      );
+      onMediaChange(updatedMedia);
+      setEditingMedia(null);
+      toast.success('Foto berhasil diedit');
+    }
+  };
+
+  const handleAudioSave = (audioData: string, duration: number) => {
+    // Check if audio already exists
+    const hasAudio = media.some(m => m.type === 'audio');
+    if (hasAudio) {
+      toast.error('Hanya 1 audio per post');
+      return;
+    }
+
+    const newMediaItem: MediaItem = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      data: audioData,
+      type: 'audio',
+      duration
+    };
+    onMediaChange([...media, newMediaItem]);
+    toast.success('Audio berhasil ditambahkan');
+  };
+
+  const toggleAudioPlayback = (id: string) => {
+    const audio = audioRefs.current.get(id);
+    if (!audio) return;
+
+    if (playingAudioId === id) {
+      audio.pause();
+      setPlayingAudioId(null);
+    } else {
+      // Pause other audios
+      audioRefs.current.forEach((a, audioId) => {
+        if (audioId !== id) a.pause();
+      });
+      audio.play();
+      setPlayingAudioId(id);
+    }
+  };
+
+  const handleAudioTimeUpdate = (id: string) => {
+    const audio = audioRefs.current.get(id);
+    if (audio) {
+      const progress = (audio.currentTime / audio.duration) * 100;
+      setAudioProgress(prev => new Map(prev).set(id, progress));
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const removeMedia = (id: string) => {
     onMediaChange(media.filter(item => item.id !== id));
   };
@@ -210,46 +307,74 @@ export function MultiMediaPicker({ media, onMediaChange, className }: MultiMedia
       <div className={cn('flex flex-col gap-3', className)}>
         {/* Media Grid */}
         {media.length > 0 && (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {media.map((item) => (
-              <div key={item.id} className="relative rounded-lg overflow-hidden group">
-                {item.type === 'image' ? (
-                  <img
-                    src={item.data}
-                    alt="Media"
-                    className="w-full h-16 object-cover bg-transparent"
-                  />
-                ) : (
-                  <video
-                    src={item.data}
-                    className="w-full h-16 object-cover"
-                    muted
-                  />
-                )}
+              <div key={item.id} className="rounded-lg overflow-hidden border border-border/30 bg-card">
+                {/* Media Preview */}
+                <div className="relative aspect-square">
+                  {item.type === 'image' ? (
+                    <img src={item.data} alt="Media" className="w-full h-full object-cover bg-transparent" />
+                  ) : item.type === 'video' ? (
+                    <video src={item.data} className="w-full h-full object-cover" muted />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-primary/5 p-3">
+                      <Mic className="w-10 h-10 text-primary mb-2" />
+                      <p className="text-xs font-medium mb-2">{item.duration ? formatDuration(item.duration) : 'Audio'}</p>
+                      <div className="w-full h-1 bg-primary/20 rounded-full overflow-hidden mb-2">
+                        <div 
+                          className="h-full bg-primary rounded-full transition-all" 
+                          style={{ width: `${audioProgress.get(item.id) || 0}%` }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => toggleAudioPlayback(item.id)}
+                        className="w-10 h-10 rounded-full bg-primary text-white hover:bg-primary/90 active:scale-95 transition-all flex items-center justify-center"
+                      >
+                        {playingAudioId === item.id ? (
+                          <Pause className="w-4 h-4" />
+                        ) : (
+                          <Play className="w-4 h-4" style={{ marginLeft: '2px' }} />
+                        )}
+                      </button>
+                      <audio
+                        ref={(el) => { if (el) audioRefs.current.set(item.id, el); }}
+                        src={item.data}
+                        onEnded={() => { setPlayingAudioId(null); setAudioProgress(prev => new Map(prev).set(item.id, 0)); }}
+                        onTimeUpdate={() => handleAudioTimeUpdate(item.id)}
+                        className="hidden"
+                      />
+                    </div>
+                  )}
+                </div>
                 
                 {/* Media Controls */}
-                <div className="absolute inset-0 bg-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {/* TODO: Edit functionality */}}
-                    className="p-1 bg-background/80 rounded-full hover:bg-background transition-colors"
-                    title="Edit media"
-                  >
-                    <Edit3 className="w-3 h-3" />
-                  </button>
+                <div className="flex items-center justify-center gap-1 p-2 bg-secondary/30">
+                  {item.type === 'image' && (
+                    <button
+                      type="button"
+                      onClick={() => handleEditMedia(item)}
+                      className="p-2 rounded-lg hover:bg-secondary transition-colors"
+                      title="Edit media"
+                    >
+                      <Edit3 className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => downloadMedia(item)}
-                    className="p-1 bg-background/80 rounded-full hover:bg-background transition-colors"
+                    className="p-2 rounded-lg hover:bg-secondary transition-colors"
+                    title="Download"
                   >
-                    <Download className="w-3 h-3" />
+                    <Download className="w-4 h-4 text-muted-foreground" />
                   </button>
                   <button
                     type="button"
                     onClick={() => removeMedia(item.id)}
-                    className="p-1 bg-background/80 rounded-full hover:bg-background transition-colors"
+                    className="p-2 rounded-lg hover:bg-destructive/10 transition-colors"
+                    title="Hapus"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-4 h-4 text-destructive" />
                   </button>
                 </div>
               </div>
@@ -258,8 +383,10 @@ export function MultiMediaPicker({ media, onMediaChange, className }: MultiMedia
         )}
 
         {/* Add Media Buttons */}
-        {(media.filter(m => m.type === 'image').length < MAX_IMAGE_COUNT || media.filter(m => m.type === 'video').length < MAX_VIDEO_COUNT) && (
-          <div className="flex items-center gap-2">
+        {(media.filter(m => m.type === 'image').length < MAX_IMAGE_COUNT || 
+          media.filter(m => m.type === 'video').length < MAX_VIDEO_COUNT || 
+          !media.some(m => m.type === 'audio')) && (
+          <div className="flex items-center gap-2 flex-wrap">
             {media.filter(m => m.type === 'image').length < MAX_IMAGE_COUNT && (
               <button
                 type="button"
@@ -290,6 +417,21 @@ export function MultiMediaPicker({ media, onMediaChange, className }: MultiMedia
                 <span className="text-xs">({media.filter(m => m.type === 'video').length}/{MAX_VIDEO_COUNT}) 20MB</span>
               </button>
             )}
+            {!media.some(m => m.type === 'audio') && (
+              <button
+                type="button"
+                onClick={() => setShowAudioRecorder(true)}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-2 rounded-lg',
+                  'text-sm text-muted-foreground',
+                  'hover:bg-secondary transition-colors'
+                )}
+              >
+                <Mic className="w-5 h-5" />
+                <span>Audio</span>
+                <span className="text-xs">(Maks 3 menit)</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -309,6 +451,26 @@ export function MultiMediaPicker({ media, onMediaChange, className }: MultiMedia
           className="hidden"
         />
       </div>
+
+      {/* Image Editor */}
+      {editingMedia && (
+        <ImageEditor
+          isOpen={showImageEditor}
+          onClose={() => {
+            setShowImageEditor(false);
+            setEditingMedia(null);
+          }}
+          imageData={editingMedia.data}
+          onSave={handleSaveEditedImage}
+        />
+      )}
+
+      {/* Audio Recorder */}
+      <AudioRecorder
+        isOpen={showAudioRecorder}
+        onClose={() => setShowAudioRecorder(false)}
+        onSave={handleAudioSave}
+      />
 
       {/* Dimension Picker Modal */}
       <AnimatePresence>
@@ -336,10 +498,10 @@ export function MultiMediaPicker({ media, onMediaChange, className }: MultiMedia
                     <ImagePlus className="w-8 h-8 text-primary" />
                   </div>
                   <h3 className="font-semibold text-xl mb-2">
-                    Pilih Dimensi Gambar
+                    {editingMedia ? 'Ubah Dimensi Gambar' : 'Pilih Dimensi Gambar'}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    Pilih bagaimana gambar akan ditampilkan
+                    {editingMedia ? 'Pilih dimensi baru untuk gambar' : 'Pilih bagaimana gambar akan ditampilkan'}
                   </p>
                 </div>
 
@@ -406,6 +568,7 @@ export function MultiMediaPicker({ media, onMediaChange, className }: MultiMedia
                   onClick={() => {
                     setShowDimensionPicker(false);
                     setPendingImage(null);
+                    setEditingMedia(null);
                   }}
                 >
                   Batal

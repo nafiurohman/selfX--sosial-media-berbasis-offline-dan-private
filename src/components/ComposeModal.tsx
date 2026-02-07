@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Layers, Grid3X3 } from 'lucide-react';
+import { X, Send, Layers, Grid3X3, Type } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { MultiMediaPicker } from '@/components/MultiMediaPicker';
+import { RichTextEditor } from '@/components/RichTextEditor';
 import type { Post, MediaItem } from '@/lib/types';
 
 const MAX_CHARS = 1000;
@@ -21,9 +22,10 @@ export function ComposeModal({ isOpen, onClose, onSubmit, editPost }: ComposeMod
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [postOption, setPostOption] = useState<'combined' | 'separate'>('combined');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [useRichText, setUseRichText] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const charCount = content.length;
+  const charCount = useRichText ? content.replace(/<[^>]*>/g, '').length : content.length;
   const isOverLimit = charCount > MAX_CHARS;
   const isEmpty = content.trim().length === 0 && media.length === 0;
   const isValid = !isEmpty && !isOverLimit;
@@ -154,29 +156,50 @@ export function ComposeModal({ isOpen, onClose, onSubmit, editPost }: ComposeMod
 
             {/* Content */}
             <div className="flex-1 p-4 overflow-y-auto space-y-3">
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Judul (opsional)"
-                className={cn(
-                  'w-full bg-transparent border-b border-border/50 pb-2 mb-2',
-                  'text-lg font-semibold placeholder:text-muted-foreground',
-                  'focus:outline-none focus:border-primary'
-                )}
-              />
-              <textarea
-                ref={textareaRef}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Apa yang sedang kamu pikirkan? (Enter untuk post, Shift+Enter untuk baris baru)"
-                className={cn(
-                  'w-full min-h-[120px] resize-none bg-transparent',
-                  'text-base placeholder:text-muted-foreground',
-                  'focus:outline-none'
-                )}
-              />
+              <div className="flex items-center justify-between mb-2">
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Judul (opsional)"
+                  className={cn(
+                    'flex-1 bg-transparent border-b border-border/50 pb-2',
+                    'text-lg font-semibold placeholder:text-muted-foreground',
+                    'focus:outline-none focus:border-primary'
+                  )}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setUseRichText(!useRichText)}
+                  className="ml-2"
+                  title={useRichText ? 'Mode Teks Biasa' : 'Mode Rich Text'}
+                >
+                  <Type className={cn('w-4 h-4', useRichText && 'text-primary')} />
+                </Button>
+              </div>
+              
+              {useRichText ? (
+                <RichTextEditor
+                  value={content}
+                  onChange={setContent}
+                  placeholder="Apa yang sedang kamu pikirkan?"
+                />
+              ) : (
+                <textarea
+                  ref={textareaRef}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Apa yang sedang kamu pikirkan? (Enter untuk post, Shift+Enter untuk baris baru)"
+                  className={cn(
+                    'w-full min-h-[120px] resize-none bg-transparent',
+                    'text-base placeholder:text-muted-foreground',
+                    'focus:outline-none'
+                  )}
+                />
+              )}
               
               <MultiMediaPicker 
                 media={media}

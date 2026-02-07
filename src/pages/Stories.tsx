@@ -17,7 +17,13 @@ import {
   Share2,
   ChevronDown,
   Settings,
-  User
+  User,
+  FolderPlus,
+  X,
+  Check,
+  FolderEdit,
+  Bookmark,
+  Archive
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { FloatingMenu } from '@/components/FloatingMenu';
@@ -55,15 +61,16 @@ interface Story {
   };
 }
 
-const categories = [
-  { id: 'all', name: 'Semua', color: 'bg-blue-500' },
-  { id: 'senang', name: 'Senang', color: 'bg-green-500' },
-  { id: 'sedih', name: 'Sedih', color: 'bg-blue-500' },
-];
+interface Category {
+  id: string;
+  name: string;
+  color: string;
+  isCustom?: boolean;
+}
 
 export default function Stories() {
   const [stories, setStories] = useState<Story[]>([]);
-  const [categories, setCategories] = useState([
+  const [categories, setCategories] = useState<Category[]>([
     { id: 'all', name: 'Semua', color: 'bg-blue-500' },
     { id: 'senang', name: 'Senang', color: 'bg-green-500' },
     { id: 'sedih', name: 'Sedih', color: 'bg-blue-500' },
@@ -79,23 +86,60 @@ export default function Stories() {
   const [isReceiveStoryOpen, setIsReceiveStoryOpen] = useState(false);
   const [shareStory, setShareStory] = useState<Story | null>(null);
   const [deleteStory, setDeleteStory] = useState<Story | null>(null);
+  const [categoryPickerStory, setCategoryPickerStory] = useState<Story | null>(null);
+  const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState('');
   const navigate = useNavigate();
   const user = getUser();
 
   useEffect(() => {
     loadStories();
+    loadCategories();
   }, []);
+
+  const loadCategories = () => {
+    const saved = localStorage.getItem('selfx-story-categories');
+    if (saved) {
+      const custom = JSON.parse(saved);
+      setCategories(prev => [
+        ...prev.filter(c => !c.isCustom),
+        ...custom
+      ]);
+    }
+  };
 
   const addCategory = () => {
     if (!newCategoryName.trim()) return;
     const newCategory = {
-      id: newCategoryName.toLowerCase().replace(/\s+/g, '-'),
+      id: Date.now().toString(),
       name: newCategoryName,
-      color: 'bg-purple-500'
+      color: 'bg-purple-500',
+      isCustom: true
     };
-    setCategories(prev => [...prev, newCategory]);
+    const updated = [...categories, newCategory];
+    setCategories(updated);
+    localStorage.setItem('selfx-story-categories', JSON.stringify(updated.filter(c => c.isCustom)));
     setNewCategoryName('');
     setIsAddingCategory(false);
+  };
+
+  const deleteCategory = (categoryId: string) => {
+    const updated = categories.filter(c => c.id !== categoryId);
+    setCategories(updated);
+    localStorage.setItem('selfx-story-categories', JSON.stringify(updated.filter(c => c.isCustom)));
+    // Update stories that use this category to 'all'
+    const updatedStories = stories.map(s => s.category === categoryId ? { ...s, category: 'all' } : s);
+    setStories(updatedStories);
+  };
+
+  const updateCategory = (categoryId: string, newName: string) => {
+    if (!newName.trim()) return;
+    const updated = categories.map(c => c.id === categoryId ? { ...c, name: newName } : c);
+    setCategories(updated);
+    localStorage.setItem('selfx-story-categories', JSON.stringify(updated.filter(c => c.isCustom)));
+    setEditingCategory(null);
+    setEditCategoryName('');
   };
 
   const updateStoryCategory = (storyId: string, categoryId: string) => {
@@ -202,6 +246,15 @@ export default function Stories() {
                     Profil
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/bookmarks')}>
+                    <Bookmark className="w-4 h-4 mr-2" />
+                    Bookmark
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/archive')}>
+                    <Archive className="w-4 h-4 mr-2" />
+                    Arsip
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate('/settings')}>
                     <Settings className="w-4 h-4 mr-2" />
                     Pengaturan
@@ -268,7 +321,16 @@ export default function Stories() {
 
           {/* Categories */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">Kategori Cerita:</h3>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h3 className="text-sm font-medium text-muted-foreground">Kategori Cerita:</h3>
+              <button
+                onClick={() => setManageCategoriesOpen(true)}
+                className="text-xs text-primary hover:underline flex items-center gap-1"
+              >
+                <FolderEdit className="w-3 h-3" />
+                Kelola Kategori
+              </button>
+            </div>
             <div className="flex gap-2 overflow-x-auto pb-2">
               {categories.map((category) => (
                 <button
@@ -284,39 +346,6 @@ export default function Stories() {
                   {category.name}
                 </button>
               ))}
-              
-              {isAddingCategory ? (
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="text"
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    placeholder="Nama kategori"
-                    className="glass-input text-sm px-3 py-1 w-32"
-                    autoFocus
-                  />
-                  <button
-                    onClick={addCategory}
-                    className="glass-button text-green-600 px-2 py-1"
-                  >
-                    ✓
-                  </button>
-                  <button
-                    onClick={() => setIsAddingCategory(false)}
-                    className="glass-button text-red-600 px-2 py-1"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setIsAddingCategory(true)}
-                  className="glass-button text-primary hover:bg-primary/10"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Tambah
-                </button>
-              )}
             </div>
           </div>
 
@@ -344,7 +373,7 @@ export default function Stories() {
                       {activeTab === 'shared' ? (
                         <button
                           onClick={() => setIsReceiveStoryOpen(true)}
-                          className="pill-button bg-gradient-to-r from-green-500 to-emerald-500 text-white"
+                          className="flex pill-button bg-gradient-to-r from-green-500 to-emerald-500 text-white"
                         >
                           <Download className="w-5 h-5 mr-2" />
                           Terima Cerita
@@ -352,7 +381,7 @@ export default function Stories() {
                       ) : (
                         <button
                           onClick={() => navigate('/stories/new')}
-                          className="pill-button bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                          className="flex pill-button bg-gradient-to-r from-purple-500 to-pink-500 text-white"
                         >
                           <Plus className="w-5 h-5 mr-2" />
                           Tulis Cerita
@@ -385,39 +414,60 @@ export default function Stories() {
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/stories/edit/${story.id}`);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 p-2 rounded-xl hover:bg-white/50 transition-all"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShareStory(story);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 p-2 rounded-xl hover:bg-white/50 transition-all"
-                        >
-                          <Share2 className="w-4 h-4" />
-                        </button>
-                        
-                        {!story.sharedFrom && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                           <button
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-2 rounded-full hover:bg-secondary transition-colors"
+                          >
+                            <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
-                              setDeleteStory(story);
+                              navigate(`/stories/edit/${story.id}`);
                             }}
-                            className="opacity-0 group-hover:opacity-100 p-2 rounded-xl hover:bg-red-50 text-red-500 transition-all"
                           >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
+                            <Edit3 className="w-4 h-4 mr-2" />
+                            Edit Cerita
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCategoryPickerStory(story);
+                            }}
+                          >
+                            <FolderPlus className="w-4 h-4 mr-2" />
+                            Tambah Kategori
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShareStory(story);
+                            }}
+                          >
+                            <Share2 className="w-4 h-4 mr-2" />
+                            Bagikan Cerita
+                          </DropdownMenuItem>
+                          {!story.sharedFrom && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteStory(story);
+                                }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Hapus Cerita
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
 
                     {/* Story Content Preview */}
@@ -558,6 +608,172 @@ export default function Stories() {
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Hapus
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Category Picker Modal */}
+      {categoryPickerStory && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-card w-full max-w-md"
+          >
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-2">Pilih Kategori</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Pilih kategori untuk "{categoryPickerStory.title}"
+              </p>
+              <div className="space-y-2 mb-6">
+                {categories.filter(c => c.id !== 'all').map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      updateStoryCategory(categoryPickerStory.id, cat.id);
+                      setCategoryPickerStory(null);
+                    }}
+                    className={cn(
+                      'w-full px-4 py-3 rounded-lg text-left transition-all backdrop-blur-xl border',
+                      categoryPickerStory.category === cat.id
+                        ? 'bg-primary/20 text-primary border-primary/30 font-medium'
+                        : 'bg-white/30 dark:bg-gray-800/30 border-white/20 hover:bg-white/50 dark:hover:bg-gray-700/50'
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={cn('w-3 h-3 rounded-full', cat.color)}></div>
+                      {cat.name}
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setCategoryPickerStory(null)}
+                  className="glass-button border border-gray-300 dark:border-gray-600"
+                >
+                  Batal
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Manage Categories Modal */}
+      {manageCategoriesOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-card w-full max-w-md max-h-[80vh] overflow-y-auto"
+          >
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-2">Kelola Kategori</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Tambah, edit, atau hapus kategori cerita
+              </p>
+              
+              {/* Add New Category */}
+              <div className="mb-4 p-3 rounded-lg bg-white/30 dark:bg-gray-800/30 border border-white/20">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addCategory()}
+                    placeholder="Nama kategori baru..."
+                    className="glass-input text-sm flex-1"
+                  />
+                  <button
+                    onClick={addCategory}
+                    className="glass-button bg-primary text-white px-3"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Category List */}
+              <div className="space-y-2 mb-6">
+                {categories.filter(c => c.id !== 'all').map((cat) => (
+                  <div
+                    key={cat.id}
+                    className="flex items-center gap-2 p-3 rounded-lg bg-white/30 dark:bg-gray-800/30 border border-white/20"
+                  >
+                    <div className={cn('w-3 h-3 rounded-full flex-shrink-0', cat.color)}></div>
+                    
+                    {editingCategory === cat.id ? (
+                      <>
+                        <input
+                          type="text"
+                          value={editCategoryName}
+                          onChange={(e) => setEditCategoryName(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && updateCategory(cat.id, editCategoryName)}
+                          className="glass-input text-sm flex-1 py-1"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => updateCategory(cat.id, editCategoryName)}
+                          className="p-1 hover:bg-green-500/20 rounded"
+                        >
+                          <Check className="w-4 h-4 text-green-600" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingCategory(null);
+                            setEditCategoryName('');
+                          }}
+                          className="p-1 hover:bg-red-500/20 rounded"
+                        >
+                          <X className="w-4 h-4 text-red-600" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="flex-1 text-sm font-medium">{cat.name}</span>
+                        {cat.isCustom && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setEditingCategory(cat.id);
+                                setEditCategoryName(cat.name);
+                              }}
+                              className="p-1 hover:bg-blue-500/20 rounded"
+                            >
+                              <Edit3 className="w-4 h-4 text-blue-600" />
+                            </button>
+                            <button
+                              onClick={() => deleteCategory(cat.id)}
+                              className="p-1 hover:bg-red-500/20 rounded"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-600" />
+                            </button>
+                          </>
+                        )}
+                        {!cat.isCustom && (
+                          <span className="text-xs text-muted-foreground">Default</span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setManageCategoriesOpen(false);
+                    setEditingCategory(null);
+                    setEditCategoryName('');
+                    setNewCategoryName('');
+                  }}
+                  className="glass-button bg-primary text-white"
+                >
+                  Selesai
                 </button>
               </div>
             </div>

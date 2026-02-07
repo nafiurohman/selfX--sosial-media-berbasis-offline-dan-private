@@ -1,6 +1,6 @@
-import { useState, useEffect, forwardRef } from 'react';
+import { useState, useEffect, useCallback, forwardRef, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Trash2, MoreHorizontal, Pencil, Bookmark, BookmarkCheck, MessageCircle, User, ImageOff, Share2, Download } from 'lucide-react';
+import { Heart, Trash2, MoreHorizontal, Pencil, Bookmark, BookmarkCheck, MessageCircle, User, ImageOff, Share2, Download, Archive, ArchiveRestore, Mic, Play, Pause } from 'lucide-react';
 import type { Post, BookmarkCategory, MediaItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { CustomDialog } from '@/components/ui/custom-dialog';
@@ -16,8 +16,9 @@ import { CommentSection } from '@/components/CommentSection';
 import { BookmarkPicker } from '@/components/BookmarkPicker';
 import { ShareModal } from '@/components/ShareModal';
 import { MediaViewer } from '@/components/MediaViewer';
-import { addComment, deleteComment, setBookmark, getBookmarkCategories } from '@/lib/db';
-import { toast } from 'sonner';
+import { addComment, deleteComment, setBookmark, getBookmarkCategories, toggleArchive } from '@/lib/db';
+import { linkifyText } from '@/lib/urlUtils';
+import { toast } from '@/lib/toast';
 
 interface PostCardProps {
   post: Post;
@@ -37,35 +38,45 @@ export const PostCard = forwardRef<HTMLElement, PostCardProps>(({ post, onLike, 
   const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
   const [currentPost, setCurrentPost] = useState(post);
   const [categoryInfo, setCategoryInfo] = useState<BookmarkCategory | null>(null);
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const loadCategoryInfo = useCallback(async () => {
+    if (!post.bookmarkCategory) return;
+    const categories = await getBookmarkCategories();
+    const category = categories.find(c => c.id === post.bookmarkCategory);
+    setCategoryInfo(category || null);
+  }, [post.bookmarkCategory]);
 
   useEffect(() => {
     setCurrentPost(post);
     if (post.bookmarkCategory) {
       loadCategoryInfo();
     }
-  }, [post]);
-
-  const loadCategoryInfo = async () => {
-    if (!post.bookmarkCategory) return;
-    const categories = await getBookmarkCategories();
-    const category = categories.find(c => c.id === post.bookmarkCategory);
-    setCategoryInfo(category || null);
-  };
+  }, [post, loadCategoryInfo]);
 
   const formatDate = (dateString: string, isEdited?: boolean) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
+    const diffSecs = Math.floor(diffMs / 1000);
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
     let timeStr = '';
-    if (diffMins < 1) timeStr = 'Baru saja';
-    else if (diffMins < 60) timeStr = `${diffMins}m`;
-    else if (diffHours < 24) timeStr = `${diffHours}h`;
-    else if (diffDays < 7) timeStr = `${diffDays}d`;
-    else timeStr = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    if (diffSecs < 60) timeStr = `${diffSecs} detik`; // detik
+    else if (diffMins < 60) timeStr = `${diffMins} menit`; // menit
+    else if (diffHours < 24) timeStr = `${diffHours} jam`; // jam
+    else if (diffDays === 1) timeStr = '1 hari'; // hari
+    else if (diffDays > 1) {
+      const day = date.getDate();
+      const month = date.getMonth() + 1;
+      const year = date.getFullYear();
+      timeStr = `${day}/${month}/${year}`;
+    }
     
     return isEdited ? `${timeStr} (diedit)` : timeStr;
   };
@@ -99,15 +110,48 @@ export const PostCard = forwardRef<HTMLElement, PostCardProps>(({ post, onLike, 
     }
   };
 
+  const handleArchive = async () => {
+    const updated = await toggleArchive(currentPost.id);
+    if (updated) {
+      toast.success(updated.archived ? 'Post diarsipkan' : 'Post dikembalikan dari arsip');
+      onUpdate?.(updated);
+    }
+  };
+
   const downloadMedia = (item: MediaItem) => {
     const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-    const extension = item.type === 'image' ? 'jpg' : 'mp4';
+    const extension = item.type === 'image' ? 'jpg' : item.type === 'video' ? 'mp4' : 'webm';
     const link = document.createElement('a');
     link.href = item.data;
     link.download = `selfX_${timestamp}_${item.id.slice(-6)}.${extension}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const toggleAudioPlayback = () => {
+    if (!audioRef.current) return;
+    if (playingAudioId) {
+      audioRef.current.pause();
+      setPlayingAudioId(null);
+    } else {
+      audioRef.current.play();
+      setPlayingAudioId('playing');
+    }
+  };
+
+  const handleAudioTimeUpdate = () => {
+    if (audioRef.current) {
+      const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+      setAudioProgress(progress);
+      setAudioCurrentTime(audioRef.current.currentTime);
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const openMediaViewer = (index: number) => {
@@ -117,6 +161,9 @@ export const PostCard = forwardRef<HTMLElement, PostCardProps>(({ post, onLike, 
 
   // Check if post has media (photo or video cannot be shared)
   const hasMedia = currentPost.image || currentPost.video || (currentPost.media && currentPost.media.length > 0);
+
+  // Linkify content
+  const linkedContent = useMemo(() => linkifyText(currentPost.content), [currentPost.content]);
 
   return (
     <>
@@ -139,13 +186,52 @@ export const PostCard = forwardRef<HTMLElement, PostCardProps>(({ post, onLike, 
           </div>
         )}
 
-        {/* Post type indicator */}
-        {!currentPost.sharedFrom && (
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-primary"></div>
-            <span className="text-xs text-muted-foreground font-medium">Postingan Anda</span>
+        {/* Header: Post type indicator & Options */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            {!currentPost.sharedFrom && (
+              <>
+                <div className="w-2 h-2 rounded-full bg-primary"></div>
+                <span className="text-xs text-muted-foreground font-medium">Postingan Anda</span>
+              </>
+            )}
           </div>
-        )}
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-2 rounded-full hover:bg-secondary transition-colors">
+                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-card border-border">
+              <DropdownMenuItem onClick={() => onEdit(currentPost)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Edit Post
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleArchive}>
+                {currentPost.archived ? (
+                  <>
+                    <ArchiveRestore className="w-4 h-4 mr-2" />
+                    Kembalikan dari Arsip
+                  </>
+                ) : (
+                  <>
+                    <Archive className="w-4 h-4 mr-2" />
+                    Arsipkan
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setShowDeleteDialog(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Hapus Post
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
         {/* Bookmark badge */}
         {showBookmarkBadge && categoryInfo && (
@@ -161,33 +247,90 @@ export const PostCard = forwardRef<HTMLElement, PostCardProps>(({ post, onLike, 
           </div>
         )}
 
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
+        {/* Content */}
+        <div>
             {currentPost.title && (
               <h3 className="text-foreground font-semibold text-lg mb-1">
                 {currentPost.title}
               </h3>
             )}
-            <p className="text-foreground whitespace-pre-wrap break-words leading-relaxed">
-              {currentPost.content}
-            </p>
+            <div 
+              className="text-foreground whitespace-pre-wrap break-words leading-relaxed prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: linkedContent }}
+            />
             
             {/* Multi-media display */}
             {currentPost.media && currentPost.media.length > 0 && (
-              <div className="mt-3">
-                {currentPost.media.length === 1 ? (
-                  // Single media - compact size
-                  <div className="relative rounded-xl overflow-hidden group cursor-pointer max-w-sm" onClick={() => openMediaViewer(0)}>
-                    {currentPost.media[0].type === 'image' ? (
+              <div className="mt-3 space-y-3">
+                {/* Audio player */}
+                {currentPost.media.some(m => m.type === 'audio') && (
+                  <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+                    {currentPost.media.filter(m => m.type === 'audio').map((audioItem) => (
+                      <div key={audioItem.id} className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={toggleAudioPlayback}
+                            className="w-12 h-12 flex-shrink-0 rounded-full bg-primary text-white hover:bg-primary/90 active:scale-95 transition-all flex items-center justify-center"
+                          >
+                            {playingAudioId ? (
+                              <Pause className="w-5 h-5" />
+                            ) : (
+                              <Play className="w-5 h-5" style={{ marginLeft: '2px' }} />
+                            )}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Mic className="w-4 h-4 text-primary" />
+                              <span className="text-sm font-medium">Rekaman Suara</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground font-mono tabular-nums">
+                                {formatDuration(Math.floor(audioCurrentTime))}
+                              </span>
+                              <div className="flex-1 h-1.5 bg-primary/20 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-primary rounded-full transition-all duration-200" 
+                                  style={{ width: `${audioProgress}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-muted-foreground font-mono tabular-nums">
+                                {audioItem.duration ? formatDuration(audioItem.duration) : '0:00'}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => downloadMedia(audioItem)}
+                            className="w-10 h-10 flex-shrink-0 rounded-full hover:bg-primary/10 active:scale-95 transition-all flex items-center justify-center"
+                          >
+                            <Download className="w-4 h-4 text-primary" />
+                          </button>
+                        </div>
+                        <audio 
+                          ref={audioRef} 
+                          src={audioItem.data} 
+                          onEnded={() => { setPlayingAudioId(null); setAudioProgress(0); setAudioCurrentTime(0); }}
+                          onTimeUpdate={handleAudioTimeUpdate}
+                          className="hidden" 
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Image/Video display */}
+                {currentPost.media.filter(m => m.type !== 'audio').length === 1 ? (
+                  // Single media - full width
+                  <div className="relative rounded-xl overflow-hidden group cursor-pointer" onClick={() => openMediaViewer(0)}>
+                    {currentPost.media.filter(m => m.type !== 'audio')[0].type === 'image' ? (
                       <img
-                        src={currentPost.media[0].data}
+                        src={currentPost.media.filter(m => m.type !== 'audio')[0].data}
                         alt="Post media"
                         className="w-full h-48 object-cover bg-transparent"
                         loading="lazy"
                       />
                     ) : (
                       <video
-                        src={currentPost.media[0].data}
+                        src={currentPost.media.filter(m => m.type !== 'audio')[0].data}
                         className="w-full h-48 object-cover"
                         muted
                       />
@@ -196,22 +339,22 @@ export const PostCard = forwardRef<HTMLElement, PostCardProps>(({ post, onLike, 
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        downloadMedia(currentPost.media[0]);
+                        downloadMedia(currentPost.media.filter(m => m.type !== 'audio')[0]);
                       }}
                       className="absolute top-2 right-2 p-2 bg-foreground/80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <Download className="w-4 h-4 text-background" />
                     </button>
                   </div>
-                ) : (
-                  // Multiple media - compact grid
+                ) : currentPost.media.filter(m => m.type !== 'audio').length > 1 ? (
+                  // Multiple media - full width grid
                   <div className={cn(
-                    'grid gap-2 max-w-md',
-                    currentPost.media.length === 2 ? 'grid-cols-2' :
-                    currentPost.media.length === 3 ? 'grid-cols-3' :
+                    'grid gap-2',
+                    currentPost.media.filter(m => m.type !== 'audio').length === 2 ? 'grid-cols-2' :
+                    currentPost.media.filter(m => m.type !== 'audio').length === 3 ? 'grid-cols-3' :
                     'grid-cols-2'
                   )}>
-                    {currentPost.media.slice(0, 4).map((item, index) => (
+                    {currentPost.media.filter(m => m.type !== 'audio').slice(0, 4).map((item, index) => (
                       <div key={item.id} className="relative rounded-xl overflow-hidden group cursor-pointer" onClick={() => openMediaViewer(index)}>
                         {item.type === 'image' ? (
                           <img
@@ -238,17 +381,17 @@ export const PostCard = forwardRef<HTMLElement, PostCardProps>(({ post, onLike, 
                           <Download className="w-3 h-3 text-background" />
                         </button>
                         {/* Show count overlay for 4+ items */}
-                        {index === 3 && currentPost.media.length > 4 && (
+                        {index === 3 && currentPost.media.filter(m => m.type !== 'audio').length > 4 && (
                           <div className="absolute inset-0 bg-foreground/60 flex items-center justify-center">
                             <span className="text-background font-semibold text-sm">
-                              +{currentPost.media.length - 4}
+                              +{currentPost.media.filter(m => m.type !== 'audio').length - 4}
                             </span>
                           </div>
                         )}
                       </div>
                     ))}
                   </div>
-                )}
+                ) : null}
               </div>
             )}
             
@@ -280,32 +423,9 @@ export const PostCard = forwardRef<HTMLElement, PostCardProps>(({ post, onLike, 
               </div>
             )}
             
-            <p className="text-muted-foreground text-sm mt-3">
-              {formatDate(currentPost.updatedAt || currentPost.createdAt, !!currentPost.updatedAt)}
-            </p>
-          </div>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="p-2 rounded-full hover:bg-secondary transition-colors">
-                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-card border-border">
-              <DropdownMenuItem onClick={() => onEdit(currentPost)}>
-                <Pencil className="w-4 h-4 mr-2" />
-                Edit Post
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => setShowDeleteDialog(true)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Hapus Post
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <p className="text-muted-foreground text-sm mt-3">
+            {formatDate(currentPost.updatedAt || currentPost.createdAt, !!currentPost.updatedAt)}
+          </p>
         </div>
 
         {/* Action bar - all in one row */}

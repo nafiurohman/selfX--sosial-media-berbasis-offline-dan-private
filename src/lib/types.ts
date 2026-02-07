@@ -14,8 +14,9 @@ export interface Comment {
 export interface MediaItem {
   id: string;
   data: string; // base64 encoded
-  type: 'image' | 'video';
+  type: 'image' | 'video' | 'audio';
   dimension?: '4:5' | '1:1' | 'original'; // for images only
+  duration?: number; // for audio/video in seconds
 }
 
 export interface Post {
@@ -31,6 +32,7 @@ export interface Post {
   media?: MediaItem[]; // new multi-media support
   comments: Comment[];
   bookmarkCategory?: string; // null = not bookmarked
+  archived?: boolean; // true = archived, hidden from feed
   // Shared post info
   sharedFrom?: {
     name: string;

@@ -1,7 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ArrowLeft, X, ChevronDown, Settings, User, Edit } from 'lucide-react';
+import { Search, ArrowLeft, X, ChevronDown, Settings, User, Edit, Bookmark, Archive } from 'lucide-react';
+import { AdvancedSearchFilter, type SearchFilters } from '@/components/AdvancedSearchFilter';
+import { SearchHistory, addToSearchHistory } from '@/components/SearchHistory';
+import { startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { getAllPosts, addPost, toggleLike, deletePost, updatePost } from '@/lib/db';
 import type { Post, MediaItem } from '@/lib/types';
 import { PostCard } from '@/components/PostCard';
@@ -23,6 +26,10 @@ export default function SearchPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<SearchFilters>({
+    mediaType: 'all',
+    searchInComments: false,
+  });
   const [searchParams, setSearchParams] = useSearchParams();
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [isReceiveShareOpen, setIsReceiveShareOpen] = useState(false);
@@ -57,6 +64,7 @@ export default function SearchPage() {
     const newSearchParams = new URLSearchParams();
     if (query.trim()) {
       newSearchParams.set('q', query);
+      addToSearchHistory(query);
     }
     setSearchParams(newSearchParams);
   }, [setSearchParams]);
@@ -66,17 +74,47 @@ export default function SearchPage() {
     setSearchParams(new URLSearchParams());
   }, [setSearchParams]);
 
-  // Filter posts based on search query
+  // Filter posts based on search query and filters
   const filteredPosts = useMemo(() => {
     if (!searchQuery.trim()) return [];
     
     const query = searchQuery.toLowerCase();
-    return posts.filter(post => 
-      post.content.toLowerCase().includes(query) ||
-      (post.title && post.title.toLowerCase().includes(query)) ||
-      (post.sharedFrom && post.sharedFrom.name.toLowerCase().includes(query))
-    );
-  }, [posts, searchQuery]);
+    let results = posts.filter(post => {
+      // Text search
+      const matchesContent = post.content.toLowerCase().includes(query) ||
+        (post.title && post.title.toLowerCase().includes(query)) ||
+        (post.sharedFrom && post.sharedFrom.name.toLowerCase().includes(query));
+      
+      // Search in comments
+      const matchesComments = filters.searchInComments && post.comments?.some(
+        comment => comment.content.toLowerCase().includes(query)
+      );
+      
+      if (!matchesContent && !matchesComments) return false;
+      
+      // Date range filter
+      if (filters.dateFrom || filters.dateTo) {
+        const postDate = new Date(post.createdAt);
+        const from = filters.dateFrom ? startOfDay(filters.dateFrom) : new Date(0);
+        const to = filters.dateTo ? endOfDay(filters.dateTo) : new Date();
+        
+        if (!isWithinInterval(postDate, { start: from, end: to })) {
+          return false;
+        }
+      }
+      
+      // Media type filter
+      if (filters.mediaType !== 'all') {
+        if (filters.mediaType === 'text' && (post.image || post.video)) return false;
+        if (filters.mediaType === 'image' && !post.image) return false;
+        if (filters.mediaType === 'video' && !post.video) return false;
+      }
+      
+      return true;
+    });
+    
+    return results;
+  }, [posts, searchQuery, filters]);
 
   const handleCreatePost = async (
     content: string, 
@@ -153,6 +191,15 @@ export default function SearchPage() {
                     Profil
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/bookmarks')}>
+                    <Bookmark className="w-4 h-4 mr-2" />
+                    Bookmark
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/archive')}>
+                    <Archive className="w-4 h-4 mr-2" />
+                    Arsip
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate('/settings')}>
                     <Settings className="w-4 h-4 mr-2" />
                     Pengaturan
@@ -187,6 +234,7 @@ export default function SearchPage() {
                 </button>
               )}
             </div>
+            <AdvancedSearchFilter filters={filters} onFiltersChange={setFilters} />
           </div>
         </header>
         
@@ -194,12 +242,15 @@ export default function SearchPage() {
         {/* Content */}
         <main className="container px-4 md:px-6 py-4 pb-32 md:pb-4">
           {!searchQuery ? (
-            <div className="text-center py-20">
-              <Search className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Cari Postingan</h2>
-              <p className="text-muted-foreground">
-                Masukkan kata kunci untuk mencari postingan
-              </p>
+            <div className="max-w-2xl mx-auto">
+              <div className="text-center py-12 mb-8">
+                <Search className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h2 className="text-xl font-semibold mb-2">Cari Postingan</h2>
+                <p className="text-muted-foreground">
+                  Masukkan kata kunci untuk mencari postingan
+                </p>
+              </div>
+              <SearchHistory onSelect={handleSearch} />
             </div>
           ) : isLoading ? (
             <div className="space-y-4">

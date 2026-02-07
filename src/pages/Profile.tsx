@@ -1,18 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Camera, User as UserIcon, Heart, MessageCircle, Image, Video, ChevronDown, Settings, Edit, HelpCircle, Info } from 'lucide-react';
+import { Camera, User as UserIcon, Heart, MessageCircle, Image, Video, ChevronDown, Settings, Edit, HelpCircle, Info, BarChart3, FileText, Flame, FileCheck, Shield, Bookmark, Archive, BookOpen, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getUser, updateUser } from '@/lib/storage';
 import { getAllPosts, addPost, toggleLike, deletePost } from '@/lib/db';
-import { calculateStats } from '@/lib/stats';
+import { calculateStats, calculateStoryStats } from '@/lib/stats';
 import type { User as UserType, Post, MediaItem } from '@/lib/types';
 import { Navigation } from '@/components/Navigation';
 import { SEO } from '@/components/SEO';
 import { ComposeModal } from '@/components/ComposeModal';
 import { FloatingMenu } from '@/components/FloatingMenu';
 import { ReceiveShareModal } from '@/components/ReceiveShareModal';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +32,7 @@ export default function Profile() {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [stats, setStats] = useState({ totalPosts: 0, totalLikes: 0, totalComments: 0, totalMedia: 0 });
+  const [stats, setStats] = useState({ totalPosts: 0, totalLikes: 0, totalComments: 0, totalMedia: 0, currentStreak: 0, longestStreak: 0, totalStories: 0, todayStories: 0 });
   const [activeTab, setActiveTab] = useState<'posts' | 'media' | 'likes' | 'comments'>('posts');
   const [posts, setPosts] = useState<Post[]>([]);
   const [isComposeOpen, setIsComposeOpen] = useState(false);
@@ -73,6 +73,7 @@ export default function Profile() {
     const allPosts = await getAllPosts();
     setPosts(allPosts);
     const calculated = calculateStats(allPosts);
+    const storyStats = calculateStoryStats();
     
     const totalComments = allPosts.reduce((sum, post) => sum + (post.comments?.length || 0), 0);
     const totalMedia = allPosts.filter(post => post.image || post.video).length;
@@ -82,6 +83,10 @@ export default function Profile() {
       totalLikes: calculated.totalLikes,
       totalComments,
       totalMedia,
+      currentStreak: calculated.currentStreak,
+      longestStreak: calculated.longestStreak,
+      totalStories: storyStats.totalStories,
+      todayStories: storyStats.todayStories,
     });
   };
 
@@ -205,11 +210,21 @@ export default function Profile() {
                     <ChevronDown className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem onClick={() => setIsEditing(!isEditing)}>
                     <Edit className="w-4 h-4 mr-2" />
                     {isEditing ? 'Batal Edit' : 'Edit Profil'}
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/bookmarks')}>
+                    <Bookmark className="w-4 h-4 mr-2" />
+                    Bookmark
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/archive')}>
+                    <Archive className="w-4 h-4 mr-2" />
+                    Arsip
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate('/help')}>
                     <HelpCircle className="w-4 h-4 mr-2" />
                     Pusat Bantuan
@@ -217,6 +232,14 @@ export default function Profile() {
                   <DropdownMenuItem onClick={() => navigate('/about')}>
                     <Info className="w-4 h-4 mr-2" />
                     Tentang selfX
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/terms')}>
+                    <FileCheck className="w-4 h-4 mr-2" />
+                    Syarat & Ketentuan
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/privacy')}>
+                    <Shield className="w-4 h-4 mr-2" />
+                    Kebijakan Privasi
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate('/settings')}>
@@ -352,6 +375,68 @@ export default function Profile() {
               </div>
             </div>
           </motion.div>
+
+          {/* Detailed Statistics */}
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6"
+          >
+            <h2 className="text-sm font-medium text-muted-foreground mb-3 px-1 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Statistik Detail
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="modern-card rounded-2xl p-4">
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <FileText className="w-4 h-4" />
+                  <span className="text-xs">Total Post</span>
+                </div>
+                <p className="text-2xl font-bold">{stats.totalPosts}</p>
+              </div>
+              <div className="modern-card rounded-2xl p-4">
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <Heart className="w-4 h-4 text-like" />
+                  <span className="text-xs">Total Like</span>
+                </div>
+                <p className="text-2xl font-bold">{stats.totalLikes}</p>
+              </div>
+              <div className="modern-card rounded-2xl p-4">
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <Flame className="w-4 h-4 text-warning" />
+                  <span className="text-xs">Streak Saat Ini</span>
+                </div>
+                <p className="text-2xl font-bold">
+                  {stats.currentStreak}
+                  <span className="text-sm font-normal text-muted-foreground ml-1">hari</span>
+                </p>
+              </div>
+              <div className="modern-card rounded-2xl p-4">
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <Flame className="w-4 h-4 text-primary" />
+                  <span className="text-xs">Streak Terpanjang</span>
+                </div>
+                <p className="text-2xl font-bold">
+                  {stats.longestStreak}
+                  <span className="text-sm font-normal text-muted-foreground ml-1">hari</span>
+                </p>
+              </div>
+              <div className="modern-card rounded-2xl p-4">
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <BookOpen className="w-4 h-4 text-purple-600" />
+                  <span className="text-xs">Total Cerita</span>
+                </div>
+                <p className="text-2xl font-bold">{stats.totalStories}</p>
+              </div>
+              <div className="modern-card rounded-2xl p-4">
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <Calendar className="w-4 h-4 text-green-600" />
+                  <span className="text-xs">Cerita Hari Ini</span>
+                </div>
+                <p className="text-2xl font-bold">{stats.todayStories}</p>
+              </div>
+            </div>
+          </motion.section>
 
           {/* Tab Navigation */}
           <div className="tab-nav mb-4">

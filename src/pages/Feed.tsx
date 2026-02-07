@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Settings, User } from 'lucide-react';
+import { ChevronDown, Settings, User, Bookmark, Archive } from 'lucide-react';
 import { getUser } from '@/lib/storage';
 import { getAllPosts, addPost, deletePost, toggleLike, updatePost } from '@/lib/db';
 import type { Post, MediaItem } from '@/lib/types';
@@ -64,7 +64,6 @@ export default function Feed() {
         title, 
         content, 
         media,
-        // Keep legacy fields for backward compatibility
         image: media?.find(m => m.type === 'image')?.data,
         video: media?.find(m => m.type === 'video')?.data,
         imageDimension: media?.find(m => m.type === 'image')?.dimension,
@@ -75,19 +74,16 @@ export default function Feed() {
       setEditingPost(null);
     } else {
       if (media && media.length > 1 && postOption === 'separate') {
-        // Create separate posts for each media
         const newPosts = [];
         for (const mediaItem of media) {
           const newPost = await addPost(content, [mediaItem], title);
           newPosts.push(newPost);
         }
-        setPosts((prev) => [...newPosts.reverse(), ...prev]);
+        setPosts((prev) => [...newPosts, ...prev]);
       } else {
-        // Create single post with all media
         const newPost = await addPost(content, media, title);
         setPosts((prev) => [newPost, ...prev]);
       }
-      // Scroll to top after creating new post
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -119,6 +115,7 @@ export default function Feed() {
   const handlePostUpdate = (updatedPost: Post) => {
     setPosts((prev) =>
       prev.map((p) => (p.id === updatedPost.id ? updatedPost : p))
+        .filter((p) => !p.archived) // Filter out archived posts
     );
   };
 
@@ -179,6 +176,15 @@ export default function Feed() {
                     Profil
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/bookmarks')}>
+                    <Bookmark className="w-4 h-4 mr-2" />
+                    Bookmark
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/archive')}>
+                    <Archive className="w-4 h-4 mr-2" />
+                    Arsip
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate('/settings')}>
                     <Settings className="w-4 h-4 mr-2" />
                     Pengaturan
@@ -190,7 +196,7 @@ export default function Feed() {
         </header>
 
         {/* Tab Navigation */}
-        <div className="border-b border-border/30 bg-background sticky top-16 md:top-0 z-20">
+        <div className="border-b border-border/30 backdrop-blur-2xl bg-white/60 dark:bg-gray-900/60 sticky top-16 md:top-0 z-20">
           <div className="container px-4 md:px-6">
             <div className="flex justify-center">
               <div className="tab-nav max-w-md w-full">

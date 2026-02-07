@@ -1,10 +1,74 @@
 import type { Post } from './types';
 
+export interface Story {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Stats {
   totalPosts: number;
   totalLikes: number;
   currentStreak: number;
   longestStreak: number;
+  totalStories?: number;
+  todayStories?: number;
+}
+
+export function getStories(): Story[] {
+  try {
+    const allStories: Story[] = [];
+    const processedIds = new Set<string>();
+    
+    const savedStories = localStorage.getItem('selfx-stories');
+    if (savedStories) {
+      const parsed = JSON.parse(savedStories);
+      parsed.forEach((story: Story) => {
+        if (!processedIds.has(story.id)) {
+          allStories.push(story);
+          processedIds.add(story.id);
+        }
+      });
+    }
+    
+    const keys = Object.keys(localStorage);
+    const storyKeys = keys.filter(key => key.startsWith('story-'));
+    
+    storyKeys.forEach(key => {
+      try {
+        const story = JSON.parse(localStorage.getItem(key) || '{}');
+        if (story.id && !processedIds.has(story.id)) {
+          allStories.push(story);
+          processedIds.add(story.id);
+        }
+      } catch {
+        // Skip invalid stories
+      }
+    });
+    
+    return allStories;
+  } catch {
+    return [];
+  }
+}
+
+export function calculateStoryStats(): { totalStories: number; todayStories: number } {
+  const stories = getStories();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const todayStories = stories.filter(story => {
+    const storyDate = new Date(story.createdAt);
+    storyDate.setHours(0, 0, 0, 0);
+    return storyDate.getTime() === today.getTime();
+  }).length;
+  
+  return {
+    totalStories: stories.length,
+    todayStories
+  };
 }
 
 export function calculateStats(posts: Post[]): Stats {

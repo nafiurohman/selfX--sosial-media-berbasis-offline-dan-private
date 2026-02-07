@@ -90,6 +90,10 @@ export function hasOnboarded(): boolean {
   return localStorage.getItem(ONBOARDED_KEY) === 'true';
 }
 
+export function isOnboarded(): boolean {
+  return hasOnboarded();
+}
+
 export function setOnboarded(value: boolean): void {
   localStorage.setItem(ONBOARDED_KEY, value ? 'true' : 'false');
 }

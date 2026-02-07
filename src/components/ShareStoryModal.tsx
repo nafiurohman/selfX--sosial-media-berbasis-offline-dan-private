@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Download, Copy, Share2, CheckCircle, Shield } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { getUser } from '@/lib/storage';
 import { encryptStoryData } from '@/lib/storyEncryption';
 

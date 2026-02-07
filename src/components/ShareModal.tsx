@@ -4,7 +4,7 @@ import { X, Download, Share2, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { sharePost } from '@/lib/db';
 import type { Post } from '@/lib/types';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 interface ShareModalProps {
   isOpen: boolean;

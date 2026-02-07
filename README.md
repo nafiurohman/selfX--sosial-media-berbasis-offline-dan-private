@@ -8,7 +8,25 @@
   [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/nafiurohman/selfx--sosial-media-pribadi)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
   [![PWA](https://img.shields.io/badge/PWA-Ready-blue.svg)](https://web.dev/progressive-web-apps/)
+  [![Version](https://img.shields.io/badge/Version-26.01.08-brightgreen.svg)](https://github.com/nafiurohman/selfx--sosial-media-pribadi)
 </div>
+
+## 🎉 Update Terbaru - Version 26.01.08 (8 Januari 2025)
+
+**Codename: "Voice & Stats Edition"**
+
+### Fitur Baru:
+- 🎤 **Voice Recorder** - Rekam audio langsung dengan visualisasi waveform (max 3 menit)
+- 🔊 **Audio Player** - Playback audio dengan progress bar dan kontrol lengkap
+- 🖼️ **Advanced Photo Editor** - Crop, rotate, efek filter, brightness/contrast adjustment
+- 📊 **Story Statistics** - Statistik cerita (Total & Hari Ini) di Settings, Profile, Calendar
+- 🔗 **URL Detection** - Auto-detect URL jadi clickable link dengan icon Lucide
+- 🔔 **Custom Toast** - Notifikasi centered dengan auto-close 3 detik & progress bar
+- 📅 **Calendar View** - Lihat aktivitas berdasarkan tanggal dengan period summary
+- 📦 **Archive Page** - Kelola post yang diarsipkan
+- 🐛 **Bug Fixes** - Perbaikan berbagai bug dan peningkatan stabilitas
+
+📖 **[Dokumentasi Lengkap Version 26.01.08](https://selfx.bezn.web.id/docs/26.01.08.html)** | **[Text Version](documentation/26.01.08.txt)**
 
 ## 🌟 Fitur Utama
 
@@ -27,6 +45,7 @@
 
 ### 🎨 **Fitur Lengkap**
 - **Multi-format media**: Foto dan video dengan 3 opsi dimensi (4:5, 1:1, original)
+- **Advanced Photo Editor**: Crop, rotate, filter effects, brightness/contrast adjustment (NEW)
 - **Transparansi gambar**: Mendukung PNG dengan background transparan
 - **Sistem komentar**: Interaktif dengan toggle show/hide
 - **Bookmark dengan kategori**: Organisasi konten yang fleksibel
@@ -43,6 +62,14 @@
 - **Import/Export cerita**: Backup dan restore cerita secara terpisah
 - **Statistik cerita**: Jumlah karakter dan estimasi waktu baca
 - **CRUD lengkap**: Create, Read, Update, Delete cerita dengan mudah
+
+### 🎤 **Fitur Audio (NEW in v26.01.08)**
+- **Voice Recorder**: Rekam audio langsung dari aplikasi (max 3 menit)
+- **Waveform Visualization**: Visualisasi gelombang suara real-time dengan 25 bar
+- **Audio Player**: Playback dengan progress bar, duration tracking, dan download
+- **Recording Controls**: Record, Pause, Resume, Stop dengan UI yang intuitif
+- **Permission Handling**: Automatic microphone permission request
+- **Offline Storage**: Audio tersimpan 100% offline di IndexedDB
 
 ## 🚀 Demo
 

@@ -1,7 +1,7 @@
 {
   "name": "selfx-sosial-media-pribadi",
   "private": true,
-  "version": "1.0.0",
+  "version": "26.01.08",
   "description": "Platform sosial media pribadi 100% offline dengan enkripsi AES-256",
   "homepage": "https://selfx.bezn.web.id",
   "repository": {

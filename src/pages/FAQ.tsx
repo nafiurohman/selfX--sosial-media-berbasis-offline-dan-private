@@ -92,7 +92,7 @@ export default function FAQ() {
         },
         {
           q: "Berapa banyak storage yang dibutuhkan selfX?",
-          a: "Aplikasi selfX sendiri hanya membutuhkan sekitar 5-10MB. Storage untuk data Anda tergantung pada jumlah post, foto, dan video yang Anda simpan. Setiap foto dibatasi 3MB dan video 5MB."
+          a: "Aplikasi selfX sendiri hanya membutuhkan sekitar 5-10MB. Storage untuk data Anda tergantung pada jumlah post, foto, dan video yang Anda simpan. Setiap foto dibatasi 10MB dan video 20MB."
         },
         {
           q: "Bisakah saya sync data antar perangkat?",
@@ -106,7 +106,7 @@ export default function FAQ() {
       questions: [
         {
           q: "Bagaimana cara backup data saya?",
-          a: "Pergi ke Settings > Backup & Restore > Export Data. File backup akan diunduh dalam format terenkripsi (.selfx) yang bisa Anda simpan di cloud storage atau perangkat lain."
+          a: "Pergi ke Settings > Backup & Restore > Export Data. File backup akan diunduh dalam format terenkripsi (.json) yang bisa Anda simpan di cloud storage atau perangkat lain."
         },
         {
           q: "Seberapa sering saya harus backup?",
@@ -114,7 +114,7 @@ export default function FAQ() {
         },
         {
           q: "Bisakah saya restore data di perangkat berbeda?",
-          a: "Ya, file backup (.selfx) bisa diimpor ke perangkat apapun yang menjalankan selfX. Pastikan Anda ingat password untuk membuka file backup."
+          a: "Ya, file backup (.json) bisa diimpor ke perangkat apapun yang menjalankan selfX. Pastikan Anda ingat password untuk membuka file backup."
         },
         {
           q: "Apakah file backup aman?",
@@ -312,11 +312,18 @@ export default function FAQ() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
-                onClick={() => window.open('mailto:support@beznproject.web.id', '_blank')}
+                onClick={() => navigate('/about#contact')}
                 className="gap-2"
               >
                 <HelpCircle className="w-4 h-4" />
-                Email Support
+                Hubungi Kami
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => navigate('/about')}
+                className="gap-2"
+              >
+                Tentang selfX
               </Button>
             </div>
           </motion.div>

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import type { BookmarkCategory } from '@/lib/types';
 import { getBookmarkCategories, addBookmarkCategory } from '@/lib/db';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 interface BookmarkPickerProps {
   currentCategory?: string;

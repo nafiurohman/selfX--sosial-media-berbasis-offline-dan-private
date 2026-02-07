@@ -401,6 +401,24 @@
   .media-container-1-1 {
     @apply aspect-square;
   }
+
+  /* URL Link Styling */
+  .url-link {
+    @apply inline-flex items-center gap-1 text-primary underline decoration-primary/30 hover:decoration-primary;
+    @apply transition-all duration-200;
+    @apply break-all;
+    word-break: break-word;
+  }
+
+  .url-link:hover {
+    @apply decoration-2;
+  }
+
+  .url-icon {
+    @apply inline-block flex-shrink-0;
+    vertical-align: middle;
+    margin-top: -2px;
+  }
 }
 
 @layer utilities {

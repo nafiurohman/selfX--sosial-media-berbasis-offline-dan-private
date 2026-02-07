@@ -13,43 +13,49 @@ const DEFAULT_CATEGORIES: BookmarkCategory[] = [
   { id: 'later', name: 'Nanti dibaca', color: '#3B82F6', isDefault: true },
 ];
 
-let dbInstance: IDBPDatabase | null = null;
+// Global singleton database instance
+const getDB = (() => {
+  let dbPromise: Promise<IDBPDatabase> | null = null;
+  
+  return async (): Promise<IDBPDatabase> => {
+    if (!dbPromise) {
+      dbPromise = (async () => {
+        const db = await openDB(DB_NAME, DB_VERSION, {
+          upgrade(db, oldVersion) {
+            if (!db.objectStoreNames.contains('posts')) {
+              const postsStore = db.createObjectStore('posts', { keyPath: 'id' });
+              postsStore.createIndex('createdAt', 'createdAt');
+              postsStore.createIndex('bookmarkCategory', 'bookmarkCategory');
+            }
+            if (!db.objectStoreNames.contains('settings')) {
+              db.createObjectStore('settings', { keyPath: 'id' });
+            }
+          },
+        });
+        
+        const settings = await db.get('settings', 'app-settings');
+        if (!settings) {
+          await db.put('settings', {
+            id: 'app-settings',
+            theme: getTheme(),
+            bookmarkCategories: DEFAULT_CATEGORIES,
+          });
+        } else if (!settings.bookmarkCategories) {
+          await db.put('settings', {
+            ...settings,
+            bookmarkCategories: DEFAULT_CATEGORIES,
+          });
+        }
+        
+        return db;
+      })();
+    }
+    return dbPromise;
+  };
+})();
 
 export async function initDB(): Promise<IDBPDatabase> {
-  if (dbInstance) return dbInstance;
-  
-  dbInstance = await openDB(DB_NAME, DB_VERSION, {
-    upgrade(db, oldVersion) {
-      // Create posts store
-      if (!db.objectStoreNames.contains('posts')) {
-        const postsStore = db.createObjectStore('posts', { keyPath: 'id' });
-        postsStore.createIndex('createdAt', 'createdAt');
-        postsStore.createIndex('bookmarkCategory', 'bookmarkCategory');
-      }
-      
-      // Create settings store
-      if (!db.objectStoreNames.contains('settings')) {
-        db.createObjectStore('settings', { keyPath: 'id' });
-      }
-    },
-  });
-  
-  // Initialize default settings if not exists
-  const settings = await dbInstance.get('settings', 'app-settings');
-  if (!settings) {
-    await dbInstance.put('settings', {
-      id: 'app-settings',
-      theme: getTheme(),
-      bookmarkCategories: DEFAULT_CATEGORIES,
-    });
-  } else if (!settings.bookmarkCategories) {
-    await dbInstance.put('settings', {
-      ...settings,
-      bookmarkCategories: DEFAULT_CATEGORIES,
-    });
-  }
-  
-  return dbInstance;
+  return getDB();
 }
 
 // Migrate post if needed
@@ -58,6 +64,7 @@ function migratePost(post: any): Post {
     ...post,
     comments: post.comments || [],
     media: post.media || [],
+    archived: post.archived || false,
   };
   
   // Migrate legacy single media to media array if needed
@@ -84,9 +91,13 @@ function migratePost(post: any): Post {
 
 export async function getAllPosts(): Promise<Post[]> {
   const db = await initDB();
-  const posts = await db.getAll('posts');
-  // Sort by createdAt DESC and migrate
+  const tx = db.transaction('posts', 'readonly');
+  const store = tx.objectStore('posts');
+  const posts = await store.getAll();
+  await tx.done;
+  
   return posts
+    .filter(p => !p.archived)
     .map(migratePost)
     .sort((a, b) => 
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -112,13 +123,17 @@ export async function addPost(
     createdAt: new Date().toISOString(),
     liked: false,
     media: media || [],
-    // Legacy fields for backward compatibility
     image: media?.find(m => m.type === 'image')?.data,
     video: media?.find(m => m.type === 'video')?.data,
     imageDimension: media?.find(m => m.type === 'image')?.dimension,
     comments: [],
   };
-  await db.add('posts', post);
+  
+  const tx = db.transaction('posts', 'readwrite');
+  const store = tx.objectStore('posts');
+  await store.add(post);
+  await tx.done;
+  
   return post;
 }
 
@@ -196,6 +211,40 @@ export async function deleteComment(postId: string, commentId: string): Promise<
   post.comments = post.comments.filter((c: Comment) => c.id !== commentId);
   await db.put('posts', post);
   return migratePost(post);
+}
+
+// Archive
+export async function toggleArchive(postId: string): Promise<Post | null> {
+  const db = await initDB();
+  const tx = db.transaction('posts', 'readwrite');
+  const store = tx.objectStore('posts');
+  const post = await store.get(postId);
+  
+  if (!post) {
+    await tx.done;
+    return null;
+  }
+  
+  post.archived = !post.archived;
+  await store.put(post);
+  await tx.done;
+  
+  return migratePost(post);
+}
+
+export async function getArchivedPosts(): Promise<Post[]> {
+  const db = await initDB();
+  const tx = db.transaction('posts', 'readonly');
+  const store = tx.objectStore('posts');
+  const allPosts = await store.getAll();
+  await tx.done;
+  
+  return allPosts
+    .filter(p => p.archived === true)
+    .map(migratePost)
+    .sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 }
 
 // Bookmarks

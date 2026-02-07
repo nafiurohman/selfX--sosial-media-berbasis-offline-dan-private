@@ -1,5 +1,6 @@
 import { downloadFile } from '@/lib/mobile-download';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Download,
@@ -20,6 +21,8 @@ import {
   ExternalLink,
   Coffee,
   Check,
+  BookOpen,
+  Calendar,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -27,12 +30,14 @@ import { CustomDialog } from '@/components/ui/custom-dialog';
 import { Navigation } from '@/components/Navigation';
 import { getTheme, setTheme as saveTheme } from '@/lib/storage';
 import { exportAllData, importAllData, clearAllData, getAllPosts } from '@/lib/db';
-import { calculateStats, type Stats } from '@/lib/stats';
-import { toast } from 'sonner';
+import type { ExportData } from '@/lib/types';
+import { calculateStats, calculateStoryStats, type Stats } from '@/lib/stats';
+import { toast } from '@/lib/toast';
 
 import { SEO } from '@/components/SEO';
 
 export default function Settings() {
+  const navigate = useNavigate();
   const [theme, setTheme] = useState<'light' | 'dark'>(getTheme());
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -63,7 +68,11 @@ export default function Settings() {
     try {
       const posts = await getAllPosts();
       const calculatedStats = calculateStats(posts);
-      setStats(calculatedStats);
+      const storyStats = calculateStoryStats();
+      setStats({
+        ...calculatedStats,
+        ...storyStats
+      });
     } catch (error) {
       console.error('Failed to load stats:', error);
     }
@@ -106,7 +115,7 @@ export default function Settings() {
       
       // Try to decrypt and validate
       const { decryptData } = await import('@/lib/crypto');
-      const data = await decryptData<any>(text);
+      const data = await decryptData<ExportData>(text);
 
       // Validate structure
       if (!data.version || !data.user || !Array.isArray(data.posts)) {
@@ -216,6 +225,20 @@ export default function Settings() {
                   {stats?.longestStreak ?? '-'}
                   <span className="text-sm font-normal text-muted-foreground ml-1">hari</span>
                 </p>
+              </div>
+              <div className="modern-card rounded-xl p-4">
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <BookOpen className="w-4 h-4 text-purple-600" />
+                  <span className="text-xs">Total Cerita</span>
+                </div>
+                <p className="text-2xl font-bold">{stats?.totalStories ?? '-'}</p>
+              </div>
+              <div className="modern-card rounded-xl p-4">
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <Calendar className="w-4 h-4 text-green-600" />
+                  <span className="text-xs">Cerita Hari Ini</span>
+                </div>
+                <p className="text-2xl font-bold">{stats?.todayStories ?? '-'}</p>
               </div>
             </div>
           </motion.section>

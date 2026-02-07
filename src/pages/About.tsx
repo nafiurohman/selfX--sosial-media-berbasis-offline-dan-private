@@ -1,5 +1,6 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useEffect } from 'react';
 import { 
   ArrowLeft, 
   Heart, 
@@ -33,10 +34,26 @@ import {
 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 export default function About() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Scroll to top when page loads, unless there's a hash
+    if (!location.hash) {
+      window.scrollTo(0, 0);
+    } else {
+      // Scroll to hash section after a short delay
+      setTimeout(() => {
+        const element = document.querySelector(location.hash);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, [location]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
@@ -75,7 +92,7 @@ export default function About() {
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
+              className="text-4xl md:text-5xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
             >
               selfX
             </motion.h1>
@@ -84,9 +101,9 @@ export default function About() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed"
+              className="text-lg md:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed px-4"
             >
-              Platform sosial media pribadi yang 100% offline,<br />
+              Platform sosial media pribadi yang 100% offline,<br className="hidden md:block" />
               mengutamakan privasi dengan enkripsi AES-256
             </motion.p>
             
@@ -117,8 +134,8 @@ export default function About() {
       <section className="py-20 bg-white/50 dark:bg-gray-800/50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">Mengapa selfX?</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">Mengapa selfX?</h2>
+            <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto px-4">
               Solusi terdepan untuk journaling pribadi dengan keamanan tingkat militer
             </p>
           </div>
@@ -178,6 +195,22 @@ export default function About() {
               transition={{ delay: 0.3 }}
               className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-2xl border border-white/20 rounded-3xl p-8 text-center hover:shadow-2xl transition-all duration-300"
             >
+              <div className="w-20 h-20 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <Heart className="w-10 h-10 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4">Gratis 100%</h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                Sepenuhnya gratis tanpa biaya tersembunyi, iklan, atau subscription. Akses penuh ke semua fitur.
+              </p>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.4 }}
+              className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-2xl border border-white/20 rounded-3xl p-8 text-center hover:shadow-2xl transition-all duration-300"
+            >
               <div className="w-20 h-20 bg-gradient-to-br from-gray-500 to-gray-700 rounded-3xl flex items-center justify-center mx-auto mb-6">
                 <EyeOff className="w-10 h-10 text-white" />
               </div>
@@ -191,7 +224,7 @@ export default function About() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.4 }}
+              transition={{ delay: 0.5 }}
               className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-2xl border border-white/20 rounded-3xl p-8 text-center hover:shadow-2xl transition-all duration-300"
             >
               <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
@@ -207,16 +240,26 @@ export default function About() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: 0.6 }}
               className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-2xl border border-white/20 rounded-3xl p-8 text-center hover:shadow-2xl transition-all duration-300"
             >
               <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-green-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                <Layers className="w-10 h-10 text-white" />
+                <Github className="w-10 h-10 text-white" />
               </div>
               <h3 className="text-2xl font-bold mb-4">Open Source</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Kode terbuka dan transparan. Anda bisa melihat, memodifikasi, dan berkontribusi pada pengembangan.
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                Kode terbuka dan transparan. Anda bisa melihat source code di GitHub.
               </p>
+              <a
+                href="https://github.com/nafiurohman/selfX--sosial-media-berbasis-offline-dan-private.git"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors text-sm font-medium"
+              >
+                <Github className="w-4 h-4" />
+                View on GitHub
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </motion.div>
           </div>
         </div>
@@ -227,28 +270,28 @@ export default function About() {
         <div className="container mx-auto px-4">
           <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-2xl border border-white/20 rounded-3xl p-12">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold mb-4">selfX dalam Angka</h2>
-              <p className="text-xl text-gray-600 dark:text-gray-300">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">selfX dalam Angka</h2>
+              <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 px-4">
                 Statistik pengembangan dan fitur
               </p>
             </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
               <div className="text-center">
-                <div className="text-4xl md:text-5xl font-bold text-blue-600 mb-2">15,000+</div>
-                <div className="text-gray-600 dark:text-gray-300">Lines of Code</div>
+                <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-blue-600 mb-2">15,000+</div>
+                <div className="text-sm md:text-base text-gray-600 dark:text-gray-300">Lines of Code</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl md:text-5xl font-bold text-purple-600 mb-2">50+</div>
-                <div className="text-gray-600 dark:text-gray-300">Components</div>
+                <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-purple-600 mb-2">50+</div>
+                <div className="text-sm md:text-base text-gray-600 dark:text-gray-300">Components</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl md:text-5xl font-bold text-green-600 mb-2">12+</div>
-                <div className="text-gray-600 dark:text-gray-300">Pages</div>
+                <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-green-600 mb-2">12+</div>
+                <div className="text-sm md:text-base text-gray-600 dark:text-gray-300">Pages</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl md:text-5xl font-bold text-orange-600 mb-2">3</div>
-                <div className="text-gray-600 dark:text-gray-300">Security Layers</div>
+                <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-orange-600 mb-2">3</div>
+                <div className="text-sm md:text-base text-gray-600 dark:text-gray-300">Security Layers</div>
               </div>
             </div>
           </div>
@@ -259,11 +302,11 @@ export default function About() {
       <section className="py-20 bg-white/50 dark:bg-gray-800/50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-6 flex items-center justify-center gap-3">
-              <Code className="w-10 h-10" />
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 flex items-center justify-center gap-3 px-4">
+              <Code className="w-8 h-8 md:w-10 md:h-10" />
               Teknologi Modern
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+            <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto px-4">
               Dibangun dengan teknologi terdepan untuk performa dan keamanan optimal
             </p>
           </div>
@@ -297,12 +340,12 @@ export default function About() {
       </section>
 
       {/* Contact Section */}
-      <section className="py-20">
+      <section id="contact" className="py-20">
         <div className="container mx-auto px-4">
-          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-2xl border border-white/20 rounded-3xl p-12">
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-2xl border border-white/20 rounded-3xl p-6 md:p-12">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold mb-4">Hubungi Kami</h2>
-              <p className="text-xl text-gray-600 dark:text-gray-300">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 px-4">Hubungi Kami</h2>
+              <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 px-4">
                 Ada pertanyaan atau butuh bantuan? Kami siap membantu Anda
               </p>
             </div>
@@ -362,8 +405,8 @@ export default function About() {
               <div className="w-20 h-20 bg-gradient-to-br from-amber-500 to-orange-500 rounded-3xl flex items-center justify-center mx-auto mb-8">
                 <Award className="w-10 h-10 text-white" />
               </div>
-              <h2 className="text-4xl font-bold mb-6">Bezn Project</h2>
-              <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
+              <h2 className="text-3xl md:text-4xl font-bold mb-6 px-4">Bezn Project</h2>
+              <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed px-4">
                 selfX adalah bagian dari <strong>Bezn Project</strong> - inisiatif pengembangan 
                 aplikasi yang berfokus pada privasi, keamanan, dan pengalaman pengguna yang luar biasa. 
                 Kami berkomitmen untuk menciptakan teknologi yang memberdayakan pengguna.
@@ -398,11 +441,11 @@ export default function About() {
       {/* CTA Section */}
       <section className="py-20">
         <div className="container mx-auto px-4">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl p-12 text-center text-white">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl p-8 md:p-12 text-center text-white">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 px-4">
               Siap Memulai Journey Anda?
             </h2>
-            <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl mb-8 opacity-90 max-w-2xl mx-auto px-4">
               Bergabunglah dengan ribuan pengguna yang sudah merasakan kebebasan 
               menulis tanpa khawatir privasi terganggu.
             </p>
@@ -431,14 +474,14 @@ export default function About() {
       {/* Donate Section */}
       <section className="py-20">
         <div className="container mx-auto px-4">
-          <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-3xl p-12 text-center text-white">
-            <div className="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-8">
-              <Coffee className="w-10 h-10 text-white" />
+          <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-3xl p-8 md:p-12 text-center text-white">
+            <div className="w-16 h-16 md:w-20 md:h-20 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-8">
+              <Coffee className="w-8 h-8 md:w-10 md:h-10 text-white" />
             </div>
-            <h2 className="text-4xl font-bold mb-6">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 px-4">
               Belikan Developer Kopi
             </h2>
-            <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl mb-8 opacity-90 max-w-2xl mx-auto px-4">
               Jika selfX bermanfaat untuk Anda, dukung pengembangan dengan memberikan donasi. 
               Setiap kontribusi sangat berarti untuk keberlanjutan proyek ini.
             </p>

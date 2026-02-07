@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download, FileJson, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { importSharedPost } from '@/lib/db';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 interface ReceiveShareModalProps {
   isOpen: boolean;

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bookmark, Trash2, ChevronDown, Settings, User } from 'lucide-react';
+import { Bookmark, Trash2, ChevronDown, Settings, User, Archive } from 'lucide-react';
 import { getBookmarkedPosts, getBookmarkCategories, deleteBookmarkCategory, setBookmark, addPost, toggleLike, deletePost } from '@/lib/db';
 import type { Post, BookmarkCategory, MediaItem } from '@/lib/types';
 import { PostCard } from '@/components/PostCard';
 import { Navigation } from '@/components/Navigation';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { CustomDialog } from '@/components/ui/custom-dialog';
 import { FloatingMenu } from '@/components/FloatingMenu';
 import { ComposeModal } from '@/components/ComposeModal';
@@ -145,6 +145,15 @@ export default function Bookmarks() {
                   <DropdownMenuItem onClick={() => navigate('/profile')}>
                     <User className="w-4 h-4 mr-2" />
                     Profil
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/bookmarks')}>
+                    <Bookmark className="w-4 h-4 mr-2" />
+                    Bookmark
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/archive')}>
+                    <Archive className="w-4 h-4 mr-2" />
+                    Arsip
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate('/settings')}>

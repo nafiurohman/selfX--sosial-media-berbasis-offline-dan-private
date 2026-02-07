@@ -27,11 +27,19 @@ import {
   Download,
   Moon,
   Sun,
-  Share2
+  Share2,
+  MoreVertical
 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 interface Story {
   id: string;
@@ -301,7 +309,8 @@ export default function StoryEditor() {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
+            {/* Desktop buttons */}
+            <div className="hidden md:flex items-center gap-1">
               <button
                 onClick={() => downloadStory('docx')}
                 className="glass-button p-2"
@@ -317,26 +326,56 @@ export default function StoryEditor() {
               >
                 <Share2 className="w-5 h-5" />
               </button>
+              
+              <button
+                onClick={() => setIsPreviewMode(!isPreviewMode)}
+                className={cn(
+                  'glass-button',
+                  isPreviewMode && 'bg-purple-500 text-white'
+                )}
+              >
+                <Eye className="w-5 h-5" />
+                <span className="hidden sm:inline">Preview</span>
+              </button>
+              
+              <button
+                onClick={handleSave}
+                className="glass-button bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+              >
+                <Save className="w-5 h-5" />
+                <span className="hidden sm:inline">Simpan</span>
+              </button>
             </div>
             
-            <button
-              onClick={() => setIsPreviewMode(!isPreviewMode)}
-              className={cn(
-                'glass-button',
-                isPreviewMode && 'bg-purple-500 text-white'
-              )}
-            >
-              <Eye className="w-5 h-5" />
-              <span className="hidden sm:inline">Preview</span>
-            </button>
-            
-            <button
-              onClick={handleSave}
-              className="glass-button bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-            >
-              <Save className="w-5 h-5" />
-              <span className="hidden sm:inline">Simpan</span>
-            </button>
+            {/* Mobile dropdown menu */}
+            <div className="md:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="glass-button p-2">
+                    <MoreVertical className="w-5 h-5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleSave}>
+                    <Save className="w-4 h-4 mr-2" />
+                    Simpan
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setIsPreviewMode(!isPreviewMode)}>
+                    <Eye className="w-4 h-4 mr-2" />
+                    {isPreviewMode ? 'Edit Mode' : 'Preview'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => downloadStory('docx')}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {}}>
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Bagikan
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </header>

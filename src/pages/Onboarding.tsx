@@ -17,7 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { setUser, setOnboarded, hasAcceptedTerms, setTermsAccepted } from '@/lib/storage';
 import { initDB, importAllData } from '@/lib/db';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
@@ -50,6 +50,8 @@ export default function Onboarding() {
       
       setTermsAccepted(true);
       setOnboarded(true);
+      
+      toast.success('Akun berhasil dibuat!');
       navigate('/feed');
     } catch (error) {
       console.error('Setup failed:', error);
@@ -75,7 +77,12 @@ export default function Onboarding() {
       
       // Decrypt and validate selfX signature
       const { decryptData } = await import('@/lib/crypto');
-      const data = await decryptData<any>(text);
+      const data = await decryptData<{
+        version: string;
+        user: unknown;
+        posts: unknown[];
+        encrypted: boolean;
+      }>(text);
       
       // Validate selfX backup structure
       if (!data.version || !data.user || !Array.isArray(data.posts) || !data.encrypted) {
@@ -88,6 +95,7 @@ export default function Onboarding() {
       setTermsAccepted(true);
       setOnboarded(true);
       toast.success('Data berhasil diimpor!');
+      
       navigate('/feed');
     } catch (error) {
       console.error('Import failed:', error);
@@ -332,7 +340,13 @@ export default function Onboarding() {
                       const files = Array.from(e.dataTransfer.files);
                       const file = files[0];
                       if (file && (file.type === 'application/json' || file.name.endsWith('.json'))) {
-                        handleFileSelect({ target: { files: [file] } } as any);
+                        // Create a synthetic event with proper FileList
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        const syntheticEvent = {
+                          target: { files: dataTransfer.files, value: '' }
+                        } as React.ChangeEvent<HTMLInputElement>;
+                        handleFileSelect(syntheticEvent);
                       } else {
                         toast.error('Hanya file JSON yang diperbolehkan');
                       }
@@ -429,7 +443,7 @@ export default function Onboarding() {
                   </div>
 
                   <Button
-                    className="w-full h-14 text-lg gap-2 rounded-xl"
+                    className="w-full h-14 text-lg gap-2 rounded-2xl"
                     onClick={handleCreateAccount}
                     disabled={!isNameValid || !termsAccepted || isLoading}
                   >
